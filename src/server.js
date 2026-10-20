@@ -23,7 +23,7 @@ const store = new JsonStore(config.dataFile);
 const projects = new ProjectService(store);
 const alerts = new AlertService(store);
 
-async function route(request, response) {
+export async function route(request, response) {
   const requestId = request.headers["x-request-id"] || createId("req");
   response.setHeader("x-request-id", requestId);
   response.setHeader("x-content-type-options", "nosniff");

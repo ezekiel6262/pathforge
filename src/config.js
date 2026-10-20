@@ -2,7 +2,7 @@ export const config = Object.freeze({
   port: Number(process.env.PORT || 8787),
   corsOrigin: process.env.CORS_ORIGIN || "*",
   rpcTimeoutMs: Number(process.env.RPC_TIMEOUT_MS || 10_000),
-  dataFile: process.env.DATA_FILE || ".data/pathforge.json",
+  dataFile: process.env.DATA_FILE || (process.env.VERCEL ? "/tmp/pathforge.json" : ".data/pathforge.json"),
   networks: {
     elysiumTestnet: {
       key: "elysium-testnet",

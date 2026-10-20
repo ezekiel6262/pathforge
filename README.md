@@ -2,7 +2,7 @@
 
 Veyra is a full-stack, non-custodial lifecycle console for Elysium-to-HyperCore graduation. It combines live evidence, deterministic preflight validation, simulation, unsigned action drafts, reports, project history, monitoring, and alerts. Wallet signatures authenticate workspace ownership only; Veyra never signs or broadcasts a transaction.
 
-- Live product: [veyra.vercel.app](https://veyra.vercel.app)
+- Live product: [veyra-ascend.vercel.app](https://veyra-ascend.vercel.app)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Hackathon summary and demo script: [docs/hackathon-submission.md](docs/hackathon-submission.md)
 

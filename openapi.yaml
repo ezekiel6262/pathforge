@@ -4,7 +4,7 @@ info:
   version: 0.2.0
   description: Non-custodial preflight, simulation, and lifecycle API for Elysium-to-HyperCore graduation.
 servers:
-  - url: https://veyra.vercel.app
+  - url: https://veyra-ascend.vercel.app
   - url: http://localhost:8787
 paths:
   /health:

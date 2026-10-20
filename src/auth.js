@@ -40,6 +40,7 @@ function setCookie(response, name, value, maxAge) {
 }
 
 export function createWalletChallenge(request, response, address) {
+  assertRequestOrigin(request);
   assert(isAddress(address), 400, "INVALID_ADDRESS", "A valid wallet address is required.");
   const normalized = normalizeAddress(address);
   const nonce = randomBytes(16).toString("hex");
@@ -51,6 +52,7 @@ export function createWalletChallenge(request, response, address) {
 }
 
 export async function verifyWalletChallenge(request, response, input) {
+  assertRequestOrigin(request);
   const challenge = verify(cookies(request)[CHALLENGE_COOKIE]);
   assert(challenge, 401, "CHALLENGE_EXPIRED", "Wallet challenge is missing or expired.");
   assert(input.message === challenge.message, 401, "CHALLENGE_MISMATCH", "Signed message does not match the issued challenge.");
@@ -73,7 +75,16 @@ export function requireSession(request) {
   return session;
 }
 
-export function clearSession(response) {
+export function clearSession(request, response) {
+  assertRequestOrigin(request);
   setCookie(response, SESSION_COOKIE, "", 0);
   return { authenticated: false };
+}
+
+export function assertRequestOrigin(request) {
+  const origin = request.headers.origin;
+  if (!origin) return;
+  let originHost;
+  try { originHost = new URL(origin).host; } catch { throw new AppError(403, "INVALID_ORIGIN", "Request origin is invalid."); }
+  assert(originHost === request.headers.host, 403, "INVALID_ORIGIN", "Cross-origin authentication requests are not allowed.");
 }

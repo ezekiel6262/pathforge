@@ -1,10 +1,14 @@
-# PathForge Backend
+# PathForge
 
-Full-stack PathForge Graduation Console. It inspects Elysium testnet tokens, validates HyperCore-compatible supply plans, enforces ceremony invariants, simulates stage transitions, generates unsigned action drafts, and produces preflight reports. Wallet signatures authenticate workspace ownership only; PathForge never signs or broadcasts a transaction.
+PathForge is a full-stack, non-custodial lifecycle console for Elysium-to-HyperCore graduation. It combines live evidence, deterministic preflight validation, simulation, unsigned action drafts, reports, project history, monitoring, and alerts. Wallet signatures authenticate workspace ownership only; PathForge never signs or broadcasts a transaction.
+
+- Live product: [pathforge-peach.vercel.app](https://pathforge-peach.vercel.app)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Hackathon summary and demo script: [docs/hackathon-submission.md](docs/hackathon-submission.md)
 
 ## Run
 
-Requires Node.js 20 or newer and has no third-party runtime dependencies.
+Requires Node.js 20.
 
 ```powershell
 Copy-Item .env.example .env
@@ -35,8 +39,10 @@ npm.cmd test
 | GET | `/api/auth/session` | Read the current wallet session |
 | POST | `/api/auth/logout` | Clear the wallet session |
 | GET/POST | `/api/projects` | List or create saved project workspaces |
-| GET/PATCH | `/api/projects/:id` | Read or update a project workspace |
+| GET/PATCH/DELETE | `/api/projects/:id` | Read, update, or delete a project workspace |
 | GET/POST | `/api/projects/:id/validations` | Read or execute saved validation runs |
+| GET | `/api/projects/:id/reports` | List saved project reports |
+| GET | `/api/projects/:id/monitoring` | Refresh source-labelled public lifecycle evidence |
 | POST | `/api/tokens/inspect` | Inspect an Elysium ERC-20 |
 | POST | `/api/hypercore/deploy-state` | Read deployer ceremony state |
 | POST | `/api/preflight/validate` | Run deterministic validations |

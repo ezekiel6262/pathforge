@@ -33,3 +33,25 @@ test("scopes wallet-owned projects while keeping public demos readable", async (
   await assert.rejects(() => projects.get(owned.id, stranger), (error) => error.status === 403);
   await assert.rejects(() => projects.update(owned.id, { name: "Stolen" }, stranger), (error) => error.status === 403);
 });
+
+test("deletes an owned project and its dependent records", async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "pathforge-delete-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const store = new JsonStore(path.join(directory, "store.json"));
+  const projects = new ProjectService(store);
+  const owner = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const project = await projects.create({ name: "Disposable", tokenAddress: "0x1111111111111111111111111111111111111111" }, owner);
+  await store.transaction((data) => {
+    data.validationRuns.run = { projectId: project.id };
+    data.reports.report = { projectId: project.id };
+    data.alertRules.rule = { projectId: project.id };
+    data.alertEvents.event = { projectId: project.id };
+  });
+  assert.deepEqual(await projects.delete(project.id, owner), { deleted: true, id: project.id });
+  const data = await store.read();
+  assert.equal(data.projects[project.id], undefined);
+  assert.equal(Object.keys(data.validationRuns).length, 0);
+  assert.equal(Object.keys(data.reports).length, 0);
+  assert.equal(Object.keys(data.alertRules).length, 0);
+  assert.equal(Object.keys(data.alertEvents).length, 0);
+});

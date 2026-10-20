@@ -22,7 +22,7 @@ export function send(response, status, body, corsOrigin = "*") {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(payload),
     "access-control-allow-origin": corsOrigin,
-    "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers": "content-type"
   });
   response.end(payload);

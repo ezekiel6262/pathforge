@@ -17,6 +17,7 @@ import { serveStatic } from "./static.js";
 import { AppError, assert } from "./lib/errors.js";
 import { readJson, send } from "./http.js";
 import { clearSession, createWalletChallenge, readSession, requireSession, verifyWalletChallenge } from "./auth.js";
+import { RateLimiter } from "./rate-limit.js";
 
 const rpc = new JsonRpcClient(config.networks.elysiumTestnet.rpcUrl, config.rpcTimeoutMs);
 const hyperliquid = new HyperliquidClient(config.hyperliquid.apiUrl, config.rpcTimeoutMs);
@@ -26,12 +27,17 @@ const store = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
   : new JsonStore(config.dataFile);
 const projects = new ProjectService(store);
 const alerts = new AlertService(store);
+const rateLimiter = RateLimiter.fromEnv();
+const clientIp = (request) => String(request.headers["x-forwarded-for"] || request.socket?.remoteAddress || "unknown").split(",")[0].trim();
 
 export async function route(request, response) {
   const requestId = request.headers["x-request-id"] || createId("req");
   response.setHeader("x-request-id", requestId);
   response.setHeader("x-content-type-options", "nosniff");
   response.setHeader("referrer-policy", "no-referrer");
+  response.setHeader("strict-transport-security", "max-age=31536000; includeSubDomains");
+  response.setHeader("permissions-policy", "camera=(), microphone=(), geolocation=()");
+  response.setHeader("content-security-policy", "default-src 'self'; connect-src 'self' https://testnet-rpc.elysium.kinetiq.xyz https://api.hyperliquid-testnet.xyz; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
   const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
   if (request.method === "OPTIONS") return send(response, 204, {}, config.corsOrigin);
   if (request.method === "GET" && !url.pathname.startsWith("/api/") && !["/health", "/ready"].includes(url.pathname)) {
@@ -54,10 +60,12 @@ export async function route(request, response) {
     return send(response, 200, { networks: config.networks, hyperliquid: { apiUrl: config.hyperliquid.apiUrl }, custody: "none", transactionSubmission: false }, config.corsOrigin);
   }
   if (request.method === "POST" && url.pathname === "/api/auth/challenge") {
+    await rateLimiter.check(`auth:${clientIp(request)}`, 10, 60);
     const body = await readJson(request);
     return send(response, 200, createWalletChallenge(request, response, body.address), config.corsOrigin);
   }
   if (request.method === "POST" && url.pathname === "/api/auth/verify") {
+    await rateLimiter.check(`auth:${clientIp(request)}`, 10, 60);
     return send(response, 200, await verifyWalletChallenge(request, response, await readJson(request)), config.corsOrigin);
   }
   if (request.method === "GET" && url.pathname === "/api/auth/session") {
@@ -65,7 +73,7 @@ export async function route(request, response) {
     return send(response, 200, session ? { authenticated: true, ...session } : { authenticated: false }, config.corsOrigin);
   }
   if (request.method === "POST" && url.pathname === "/api/auth/logout") {
-    return send(response, 200, clearSession(response), config.corsOrigin);
+    return send(response, 200, clearSession(request, response), config.corsOrigin);
   }
   if (request.method === "GET" && url.pathname === "/api/hypercore/spot-meta") {
     return send(response, 200, await hyperliquid.spotMeta(), config.corsOrigin);
@@ -85,6 +93,9 @@ export async function route(request, response) {
   }
   if (projectMatch && request.method === "PATCH") {
     return send(response, 200, await projects.update(projectMatch[1], await readJson(request), requireSession(request).address), config.corsOrigin);
+  }
+  if (projectMatch && request.method === "DELETE") {
+    return send(response, 200, await projects.delete(projectMatch[1], requireSession(request).address), config.corsOrigin);
   }
   const projectValidationMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/validations$/);
   if (projectValidationMatch && request.method === "GET") {
@@ -107,6 +118,36 @@ export async function route(request, response) {
     });
     return send(response, 201, run, config.corsOrigin);
   }
+  const projectReportListMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/reports$/);
+  if (projectReportListMatch && request.method === "GET") {
+    await projects.get(projectReportListMatch[1], readSession(request)?.address);
+    const data = await store.read();
+    const reports = Object.values(data.reports).filter((item) => item.projectId === projectReportListMatch[1]).sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
+    return send(response, 200, { reports }, config.corsOrigin);
+  }
+  const projectMonitoringMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/monitoring$/);
+  if (projectMonitoringMatch && request.method === "GET") {
+    const project = await projects.get(projectMonitoringMatch[1], readSession(request)?.address);
+    const [tokenResult, tickerResult, deployResult] = await Promise.allSettled([
+      inspector.inspect(project.tokenAddress),
+      project.ticker ? lookupTicker(hyperliquid, project.ticker) : Promise.resolve(null),
+      project.deployerAddress ? hyperliquid.spotDeployState(project.deployerAddress) : Promise.resolve(null)
+    ]);
+    const token = tokenResult.status === "fulfilled" ? tokenResult.value : null;
+    const ticker = tickerResult.status === "fulfilled" ? tickerResult.value : null;
+    const deployState = deployResult.status === "fulfilled" ? deployResult.value : null;
+    return send(response, 200, {
+      projectId: project.id,
+      checkedAt: new Date().toISOString(),
+      token: { status: token?.isContract ? "observed" : "unavailable", value: token, source: "Elysium testnet RPC" },
+      ticker: project.ticker ? { status: ticker ? (ticker.available ? "available" : "registered") : "unavailable", value: ticker, source: "Hyperliquid testnet spotMeta" } : { status: "not_configured", value: null },
+      deployer: project.deployerAddress ? { status: deployState ? "observed" : "unavailable", value: deployState, source: "Hyperliquid testnet spotDeployState" } : { status: "not_configured", value: null },
+      bridgeSync: { status: "unavailable", value: null, reason: "No public Elysium-to-HyperCore message-index adapter is published." },
+      permanentLink: { status: "unavailable", value: null, reason: "No public authoritative permanent-link registry adapter is published." },
+      orderBook: ticker?.markets?.length ? { status: "registered", value: ticker.markets, source: "Hyperliquid testnet spotMeta" } : { status: "not_registered", value: [] },
+      disclaimer: "Unavailable states are intentionally not inferred from private Ascend criteria."
+    }, config.corsOrigin);
+  }
   const reportMatch = url.pathname.match(/^\/api\/reports\/([^/]+)$/);
   if (reportMatch && request.method === "GET") {
     const data = await store.read();
@@ -116,6 +157,7 @@ export async function route(request, response) {
     return send(response, 200, report, config.corsOrigin);
   }
   if (request.method === "POST" && url.pathname === "/api/tokens/inspect") {
+    await rateLimiter.check(`rpc:${clientIp(request)}`, 60, 60);
     const body = await readJson(request);
     const token = await inspector.inspect(body.address);
     return send(response, 200, { token, lifecycle: resolveLifecycle({ token }) }, config.corsOrigin);

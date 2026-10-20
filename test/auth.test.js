@@ -26,5 +26,13 @@ test("authenticates a wallet challenge into an HTTP-only session", async () => {
   assert.match(sessionCookie, /HttpOnly/);
   assert.equal(readSession({ headers: { cookie: cookiePair(sessionCookie) } }).address, account.address.toLowerCase());
   const logoutResponse = new MockResponse();
-  assert.equal(clearSession(logoutResponse).authenticated, false);
+  assert.equal(clearSession({ headers: { host: "pathforge.test" } }, logoutResponse).authenticated, false);
+});
+
+test("rejects cross-origin wallet authentication requests", () => {
+  const response = new MockResponse();
+  assert.throws(
+    () => createWalletChallenge({ headers: { host: "pathforge.test", origin: "https://attacker.test" } }, response, "0x1111111111111111111111111111111111111111"),
+    (error) => error.status === 403 && error.code === "INVALID_ORIGIN"
+  );
 });

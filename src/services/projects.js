@@ -65,4 +65,18 @@ export class ProjectService {
       return project;
     });
   }
+
+  async delete(id, ownerAddress) {
+    return this.store.transaction((data) => {
+      const project = data.projects[id];
+      assert(project, 404, "PROJECT_NOT_FOUND", "Project was not found.", { id });
+      assert(project.ownerAddress && project.ownerAddress === ownerAddress, 403, "PROJECT_FORBIDDEN", "Only the owning wallet can delete this project.");
+      for (const [key, value] of Object.entries(data.validationRuns)) if (value.projectId === id) delete data.validationRuns[key];
+      for (const [key, value] of Object.entries(data.reports)) if (value.projectId === id) delete data.reports[key];
+      for (const [key, value] of Object.entries(data.alertRules)) if (value.projectId === id) delete data.alertRules[key];
+      for (const [key, value] of Object.entries(data.alertEvents)) if (value.projectId === id) delete data.alertEvents[key];
+      delete data.projects[id];
+      return { deleted: true, id };
+    });
+  }
 }

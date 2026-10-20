@@ -3,18 +3,18 @@
 Import the zero-dependency client from `sdk/pathforge-client.js` or call the JSON API directly.
 
 ```js
-import { PathForgeClient } from "../sdk/pathforge-client.js";
+import { VeyraClient } from "../sdk/pathforge-client.js";
 
-const pathforge = new PathForgeClient(import.meta.env.VITE_PATHFORGE_API_URL);
+const veyra = new VeyraClient(import.meta.env.VITE_VEYRA_API_URL);
 
-const project = await pathforge.createProject({
+const project = await veyra.createProject({
   name: "ABC Token",
   tokenAddress: "0x...",
   ticker: "ABC"
 });
 
-const token = await pathforge.inspectToken(project.tokenAddress);
-const ticker = await pathforge.lookupTicker("ABC");
+const token = await veyra.inspectToken(project.tokenAddress);
+const ticker = await veyra.lookupTicker("ABC");
 ```
 
 ## Suggested screens and calls

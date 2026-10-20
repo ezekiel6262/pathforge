@@ -34,7 +34,7 @@ export class RedisStore {
       const parsed = typeof value === "string" ? JSON.parse(value) : value;
       return { ...structuredClone(EMPTY), ...parsed };
     } catch (error) {
-      throw new AppError(500, "STORE_READ_FAILED", "Unable to read the PathForge data store.", { cause: error.message });
+      throw new AppError(500, "STORE_READ_FAILED", "Unable to read the Veyra data store.", { cause: error.message });
     }
   }
 
@@ -44,7 +44,7 @@ export class RedisStore {
       if (acquired === "OK") return;
       await wait(40 + attempt * 10);
     }
-    throw new AppError(503, "STORE_BUSY", "PathForge storage is busy. Retry the request.");
+    throw new AppError(503, "STORE_BUSY", "Veyra storage is busy. Retry the request.");
   }
 
   async transaction(mutator) {
@@ -58,7 +58,7 @@ export class RedisStore {
         return result;
       } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError(500, "STORE_WRITE_FAILED", "Unable to write the PathForge data store.", { cause: error.message });
+        throw new AppError(500, "STORE_WRITE_FAILED", "Unable to write the Veyra data store.", { cause: error.message });
       } finally {
         await this.redis.eval(RELEASE_LOCK, [this.lockKey], [token]).catch(() => {});
       }

@@ -1,4 +1,4 @@
-export class PathForgeClient {
+export class VeyraClient {
   constructor(baseUrl = "http://localhost:8787") {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
@@ -11,7 +11,7 @@ export class PathForgeClient {
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = new Error(payload?.error?.message || `PathForge request failed with HTTP ${response.status}.`);
+      const error = new Error(payload?.error?.message || `Veyra request failed with HTTP ${response.status}.`);
       error.code = payload?.error?.code;
       error.status = response.status;
       error.details = payload?.error?.details;
@@ -41,3 +41,6 @@ export class PathForgeClient {
   createAlert(projectId, input) { return this.request(`/api/projects/${encodeURIComponent(projectId)}/alerts`, { method: "POST", body: input }); }
   evaluateAlerts(projectId, snapshot) { return this.request(`/api/projects/${encodeURIComponent(projectId)}/alerts/evaluate`, { method: "POST", body: snapshot }); }
 }
+
+// Backward-compatible alias for integrations created before the Veyra rebrand.
+export const PathForgeClient = VeyraClient;

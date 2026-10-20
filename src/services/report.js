@@ -1,6 +1,6 @@
 export function createReport(input, validation, lifecycle) {
   return {
-    reportVersion: "pathforge-preflight/0.1",
+    reportVersion: "veyra-preflight/0.1",
     reportId: crypto.randomUUID(),
     generatedAt: new Date().toISOString(),
     environment: "testnet",
@@ -16,6 +16,6 @@ export function createReport(input, validation, lifecycle) {
     blockers: validation.checks.filter((item) => item.severity === "blocker" && !item.passed),
     warnings: validation.checks.filter((item) => item.severity === "warning" && !item.passed),
     passedChecks: validation.checks.filter((item) => item.passed).map((item) => item.id),
-    disclaimer: "Independent PathForge preflight. This is not an official Ascend qualification, listing guarantee, signature, or transaction submission."
+    disclaimer: "Independent Veyra preflight. This is not an official Ascend qualification, listing guarantee, signature, or transaction submission."
   };
 }

@@ -45,7 +45,7 @@ export async function route(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/health") {
-    return send(response, 200, { ok: true, service: "pathforge-backend", version: "0.1.0", time: new Date().toISOString() }, config.corsOrigin);
+    return send(response, 200, { ok: true, service: "veyra", version: "0.1.0", time: new Date().toISOString() }, config.corsOrigin);
   }
   if (request.method === "GET" && url.pathname === "/ready") {
     const checks = await Promise.allSettled([rpc.call("eth_chainId"), hyperliquid.spotMeta()]);
@@ -244,10 +244,10 @@ export function createServer() {
 if (process.argv[1] && import.meta.url === new URL(`file:///${process.argv[1].replace(/\\/g, "/")}`).href) {
   const server = createServer();
   server.listen(config.port, () => {
-    console.log(`PathForge backend listening on http://localhost:${config.port}`);
+    console.log(`Veyra backend listening on http://localhost:${config.port}`);
   });
   const shutdown = (signal) => {
-    console.log(`${signal} received; closing PathForge backend.`);
+    console.log(`${signal} received; closing Veyra backend.`);
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 5_000).unref();
   };

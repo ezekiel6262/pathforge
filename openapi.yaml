@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
-  title: PathForge API
+  title: Veyra API
   version: 0.2.0
   description: Non-custodial preflight, simulation, and lifecycle API for Elysium-to-HyperCore graduation.
 servers:
-  - url: https://pathforge-peach.vercel.app
+  - url: https://veyra.vercel.app
   - url: http://localhost:8787
 paths:
   /health:

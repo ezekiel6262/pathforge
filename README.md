@@ -1,8 +1,8 @@
-# PathForge
+# Veyra
 
-PathForge is a full-stack, non-custodial lifecycle console for Elysium-to-HyperCore graduation. It combines live evidence, deterministic preflight validation, simulation, unsigned action drafts, reports, project history, monitoring, and alerts. Wallet signatures authenticate workspace ownership only; PathForge never signs or broadcasts a transaction.
+Veyra is a full-stack, non-custodial lifecycle console for Elysium-to-HyperCore graduation. It combines live evidence, deterministic preflight validation, simulation, unsigned action drafts, reports, project history, monitoring, and alerts. Wallet signatures authenticate workspace ownership only; Veyra never signs or broadcasts a transaction.
 
-- Live product: [pathforge-peach.vercel.app](https://pathforge-peach.vercel.app)
+- Live product: [veyra.vercel.app](https://veyra.vercel.app)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Hackathon summary and demo script: [docs/hackathon-submission.md](docs/hackathon-submission.md)
 
@@ -15,7 +15,7 @@ Copy-Item .env.example .env
 npm.cmd start
 ```
 
-On Windows, no terminal commands are required: double-click `Start PathForge.cmd`. Use `Test PathForge.cmd` to run the verification suite.
+On Windows, no terminal commands are required: double-click `Start PathForge.cmd`. Use `Test PathForge.cmd` to run the verification suite. These compatibility launchers retain their original filenames.
 
 Environment variables can be set by the deployment platform. The service defaults to port `8787` and the public Elysium testnet RPC.
 
@@ -92,9 +92,9 @@ The API never asks for private keys, signs actions, broadcasts transactions, or 
 ## Container deployment
 
 ```powershell
-docker build -t pathforge-api .
-docker run --rm -p 8787:8787 -v pathforge-data:/app/.data pathforge-api
+docker build -t veyra-api .
+docker run --rm -p 8787:8787 -v veyra-data:/app/.data veyra-api
 ```
 
 The API contract is documented in `openapi.yaml`.
-The browser client is in `sdk/pathforge-client.js`, with screen-level guidance in `docs/frontend-integration.md`.
+The browser client is in `sdk/pathforge-client.js` (compatibility filename), with screen-level guidance in `docs/frontend-integration.md`.

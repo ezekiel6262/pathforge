@@ -46,7 +46,7 @@ export function createWalletChallenge(request, response, address) {
   const nonce = randomBytes(16).toString("hex");
   const host = request.headers.host || "pathforge";
   const issuedAt = new Date().toISOString();
-  const message = `${host} wants you to sign in to PathForge\n\nWallet: ${normalized}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nPurpose: Authenticate project ownership. No transaction will be submitted.`;
+  const message = `${host} wants you to sign in to Veyra\n\nWallet: ${normalized}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nPurpose: Authenticate project ownership. No transaction will be submitted.`;
   setCookie(response, CHALLENGE_COOKIE, sign({ address: normalized, nonce, message, exp: Date.now() + 10 * 60_000 }), 10 * 60);
   return { address: normalized, message, expiresIn: 600 };
 }

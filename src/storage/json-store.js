@@ -16,7 +16,7 @@ export class JsonStore {
       return { ...structuredClone(EMPTY), ...value };
     } catch (error) {
       if (error.code === "ENOENT") return structuredClone(EMPTY);
-      throw new AppError(500, "STORE_READ_FAILED", "Unable to read the PathForge data store.", { cause: error.message });
+      throw new AppError(500, "STORE_READ_FAILED", "Unable to read the Veyra data store.", { cause: error.message });
     }
   }
 

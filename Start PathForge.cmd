@@ -1,10 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title PathForge Backend
-echo Starting PathForge...
+title Veyra Backend
+echo Starting Veyra...
 echo.
 node src\server.js
 echo.
-echo PathForge stopped. Press any key to close this window.
+echo Veyra stopped. Press any key to close this window.
 pause >nul

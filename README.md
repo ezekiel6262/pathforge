@@ -8,7 +8,7 @@ PathForge is a full-stack, non-custodial lifecycle console for Elysium-to-HyperC
 
 ## Run
 
-Requires Node.js 20.
+Requires Node.js 24.
 
 ```powershell
 Copy-Item .env.example .env

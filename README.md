@@ -1,6 +1,6 @@
 # PathForge Backend
 
-Backend API for the PathForge Graduation Console. It inspects Elysium testnet tokens, validates HyperCore-compatible supply plans, enforces ceremony invariants, simulates stage transitions, generates unsigned action drafts, and produces preflight reports.
+Full-stack PathForge Graduation Console. It inspects Elysium testnet tokens, validates HyperCore-compatible supply plans, enforces ceremony invariants, simulates stage transitions, generates unsigned action drafts, and produces preflight reports. Wallet signatures authenticate workspace ownership only; PathForge never signs or broadcasts a transaction.
 
 ## Run
 
@@ -30,6 +30,10 @@ npm.cmd test
 | GET | `/api/config` | Public network registry |
 | GET | `/api/hypercore/spot-meta` | HyperCore testnet spot metadata proxy |
 | GET | `/api/hypercore/tickers/:ticker` | Check ticker registration and markets |
+| POST | `/api/auth/challenge` | Issue a short-lived wallet sign-in challenge |
+| POST | `/api/auth/verify` | Verify the signed challenge and create an HTTP-only session |
+| GET | `/api/auth/session` | Read the current wallet session |
+| POST | `/api/auth/logout` | Clear the wallet session |
 | GET/POST | `/api/projects` | List or create saved project workspaces |
 | GET/PATCH | `/api/projects/:id` | Read or update a project workspace |
 | GET/POST | `/api/projects/:id/validations` | Read or execute saved validation runs |
@@ -77,7 +81,7 @@ POST /api/preflight/validate
 
 ## Safety boundary
 
-The API never asks for private keys, signs actions, broadcasts transactions, or claims official Ascend qualification. Deposit-wallet integration remains adapter-based until official deployment addresses are published.
+The API never asks for private keys, signs actions, broadcasts transactions, or claims official Ascend qualification. The only wallet signature is a server-issued, nonce-bound authentication message with an expiry and explicit no-transaction statement. Sessions use signed, HTTP-only, `SameSite=Strict` cookies; write operations are scoped to the authenticated owner. Deposit-wallet integration remains adapter-based until official deployment addresses are published.
 
 ## Container deployment
 

@@ -19,3 +19,17 @@ test("persists projects and evaluates alert rules", async (context) => {
   assert.equal((await projects.get(project.id)).name, "ABC Token");
   assert.equal(evaluation.triggered, 1);
 });
+
+test("scopes wallet-owned projects while keeping public demos readable", async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "pathforge-ownership-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const projects = new ProjectService(new JsonStore(path.join(directory, "store.json")));
+  const owner = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const stranger = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const owned = await projects.create({ name: "Owned", tokenAddress: "0x1111111111111111111111111111111111111111" }, owner);
+  await projects.create({ name: "Public Demo", tokenAddress: "0x2222222222222222222222222222222222222222" });
+  assert.equal((await projects.list(owner)).length, 2);
+  assert.equal((await projects.list(stranger)).length, 1);
+  await assert.rejects(() => projects.get(owned.id, stranger), (error) => error.status === 403);
+  await assert.rejects(() => projects.update(owned.id, { name: "Stolen" }, stranger), (error) => error.status === 403);
+});

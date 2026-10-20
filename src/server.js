@@ -14,8 +14,9 @@ import { AlertService } from "./services/alerts.js";
 import { lookupTicker } from "./services/ticker.js";
 import { createId } from "./lib/id.js";
 import { serveStatic } from "./static.js";
-import { AppError } from "./lib/errors.js";
+import { AppError, assert } from "./lib/errors.js";
 import { readJson, send } from "./http.js";
+import { clearSession, createWalletChallenge, readSession, requireSession, verifyWalletChallenge } from "./auth.js";
 
 const rpc = new JsonRpcClient(config.networks.elysiumTestnet.rpcUrl, config.rpcTimeoutMs);
 const hyperliquid = new HyperliquidClient(config.hyperliquid.apiUrl, config.rpcTimeoutMs);
@@ -52,6 +53,20 @@ export async function route(request, response) {
   if (request.method === "GET" && url.pathname === "/api/config") {
     return send(response, 200, { networks: config.networks, hyperliquid: { apiUrl: config.hyperliquid.apiUrl }, custody: "none", transactionSubmission: false }, config.corsOrigin);
   }
+  if (request.method === "POST" && url.pathname === "/api/auth/challenge") {
+    const body = await readJson(request);
+    return send(response, 200, createWalletChallenge(request, response, body.address), config.corsOrigin);
+  }
+  if (request.method === "POST" && url.pathname === "/api/auth/verify") {
+    return send(response, 200, await verifyWalletChallenge(request, response, await readJson(request)), config.corsOrigin);
+  }
+  if (request.method === "GET" && url.pathname === "/api/auth/session") {
+    const session = readSession(request);
+    return send(response, 200, session ? { authenticated: true, ...session } : { authenticated: false }, config.corsOrigin);
+  }
+  if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+    return send(response, 200, clearSession(response), config.corsOrigin);
+  }
   if (request.method === "GET" && url.pathname === "/api/hypercore/spot-meta") {
     return send(response, 200, await hyperliquid.spotMeta(), config.corsOrigin);
   }
@@ -59,26 +74,28 @@ export async function route(request, response) {
     return send(response, 200, await lookupTicker(hyperliquid, decodeURIComponent(url.pathname.split("/").at(-1))), config.corsOrigin);
   }
   if (request.method === "GET" && url.pathname === "/api/projects") {
-    return send(response, 200, { projects: await projects.list() }, config.corsOrigin);
+    return send(response, 200, { projects: await projects.list(readSession(request)?.address) }, config.corsOrigin);
   }
   if (request.method === "POST" && url.pathname === "/api/projects") {
-    return send(response, 201, await projects.create(await readJson(request)), config.corsOrigin);
+    return send(response, 201, await projects.create(await readJson(request), requireSession(request).address), config.corsOrigin);
   }
   const projectMatch = url.pathname.match(/^\/api\/projects\/([^/]+)$/);
   if (projectMatch && request.method === "GET") {
-    return send(response, 200, await projects.get(projectMatch[1]), config.corsOrigin);
+    return send(response, 200, await projects.get(projectMatch[1], readSession(request)?.address), config.corsOrigin);
   }
   if (projectMatch && request.method === "PATCH") {
-    return send(response, 200, await projects.update(projectMatch[1], await readJson(request)), config.corsOrigin);
+    return send(response, 200, await projects.update(projectMatch[1], await readJson(request), requireSession(request).address), config.corsOrigin);
   }
   const projectValidationMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/validations$/);
   if (projectValidationMatch && request.method === "GET") {
+    await projects.get(projectValidationMatch[1], readSession(request)?.address);
     const data = await store.read();
     const runs = Object.values(data.validationRuns).filter((run) => run.projectId === projectValidationMatch[1]).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return send(response, 200, { validationRuns: runs }, config.corsOrigin);
   }
   if (projectValidationMatch && request.method === "POST") {
-    const project = await projects.get(projectValidationMatch[1]);
+    const project = await projects.get(projectValidationMatch[1], requireSession(request).address);
+    assert(project.ownerAddress, 403, "PROJECT_READ_ONLY", "Public demo projects are read-only.");
     const body = await readJson(request);
     const validation = validateCeremony(body, validatePlan(body));
     const run = { id: createId("val"), projectId: project.id, createdAt: new Date().toISOString(), input: body, result: validation };
@@ -95,6 +112,7 @@ export async function route(request, response) {
     const data = await store.read();
     const report = data.reports[reportMatch[1]];
     if (!report) throw new AppError(404, "REPORT_NOT_FOUND", "Preflight report was not found.");
+    if (report.projectId) await projects.get(report.projectId, readSession(request)?.address);
     return send(response, 200, report, config.corsOrigin);
   }
   if (request.method === "POST" && url.pathname === "/api/tokens/inspect") {
@@ -134,6 +152,8 @@ export async function route(request, response) {
     const lifecycle = resolveLifecycle({ token: { isContract: true }, hypercore: body.currentHypercoreState, bridge: body.currentBridgeState });
     const report = createReport(body, validation, lifecycle);
     if (body.projectId) {
+      const project = await projects.get(body.projectId, requireSession(request).address);
+      assert(project.ownerAddress, 403, "PROJECT_READ_ONLY", "Public demo projects are read-only.");
       await store.transaction((data) => {
         if (data.projects[body.projectId]) {
           data.reports[report.reportId] = { ...report, projectId: body.projectId };
@@ -145,10 +165,21 @@ export async function route(request, response) {
     return send(response, 200, report, config.corsOrigin);
   }
   const alertListMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/alerts$/);
-  if (alertListMatch && request.method === "GET") return send(response, 200, { alerts: await alerts.list(alertListMatch[1]) }, config.corsOrigin);
-  if (alertListMatch && request.method === "POST") return send(response, 201, await alerts.create(alertListMatch[1], await readJson(request)), config.corsOrigin);
+  if (alertListMatch && request.method === "GET") {
+    await projects.get(alertListMatch[1], readSession(request)?.address);
+    return send(response, 200, { alerts: await alerts.list(alertListMatch[1]) }, config.corsOrigin);
+  }
+  if (alertListMatch && request.method === "POST") {
+    const project = await projects.get(alertListMatch[1], requireSession(request).address);
+    assert(project.ownerAddress, 403, "PROJECT_READ_ONLY", "Public demo projects are read-only.");
+    return send(response, 201, await alerts.create(alertListMatch[1], await readJson(request)), config.corsOrigin);
+  }
   const alertEvalMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/alerts\/evaluate$/);
-  if (alertEvalMatch && request.method === "POST") return send(response, 200, await alerts.evaluate(alertEvalMatch[1], await readJson(request)), config.corsOrigin);
+  if (alertEvalMatch && request.method === "POST") {
+    const project = await projects.get(alertEvalMatch[1], requireSession(request).address);
+    assert(project.ownerAddress, 403, "PROJECT_READ_ONLY", "Public demo projects are read-only.");
+    return send(response, 200, await alerts.evaluate(alertEvalMatch[1], await readJson(request)), config.corsOrigin);
+  }
   throw new AppError(404, "NOT_FOUND", "Route not found.");
 }
 

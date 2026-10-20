@@ -13,6 +13,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@upstash/redis": "^1.35.6"
+    "@upstash/redis": "^1.35.6",
+    "viem": "^2.57.7"
   }
 }

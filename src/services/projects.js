@@ -7,24 +7,28 @@ export class ProjectService {
     this.store = store;
   }
 
-  async list() {
+  async list(ownerAddress = null) {
     const data = await this.store.read();
-    return Object.values(data.projects).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return Object.values(data.projects)
+      .filter((project) => !project.ownerAddress || project.ownerAddress === ownerAddress)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
-  async get(id) {
+  async get(id, ownerAddress = null) {
     const data = await this.store.read();
     const project = data.projects[id];
     assert(project, 404, "PROJECT_NOT_FOUND", "Project was not found.", { id });
+    assert(!project.ownerAddress || project.ownerAddress === ownerAddress, 403, "PROJECT_FORBIDDEN", "This project belongs to another wallet.");
     return project;
   }
 
-  async create(input) {
+  async create(input, ownerAddress = null) {
     assert(typeof input.name === "string" && input.name.trim().length >= 2, 400, "INVALID_PROJECT_NAME", "Project name must contain at least two characters.");
     assert(isAddress(input.tokenAddress), 400, "INVALID_ADDRESS", "A valid Elysium token address is required.");
     const now = new Date().toISOString();
     const project = {
       id: createId("prj"),
+      ownerAddress,
       name: input.name.trim(),
       tokenAddress: normalizeAddress(input.tokenAddress),
       deployerAddress: input.deployerAddress ? normalizeAddress(input.deployerAddress) : null,
@@ -43,10 +47,11 @@ export class ProjectService {
     });
   }
 
-  async update(id, input) {
+  async update(id, input, ownerAddress = null) {
     return this.store.transaction((data) => {
       const project = data.projects[id];
       assert(project, 404, "PROJECT_NOT_FOUND", "Project was not found.", { id });
+      assert(project.ownerAddress && project.ownerAddress === ownerAddress, 403, "PROJECT_FORBIDDEN", "Only the owning wallet can modify this project.");
       if (input.name !== undefined) {
         assert(typeof input.name === "string" && input.name.trim().length >= 2, 400, "INVALID_PROJECT_NAME", "Project name must contain at least two characters.");
         project.name = input.name.trim();

@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info:
+  title: PathForge API
+  version: 0.2.0
+  description: Non-custodial preflight, simulation, and lifecycle API for Elysium-to-HyperCore graduation.
+servers:
+  - url: http://localhost:8787
+paths:
+  /health:
+    get:
+      summary: Process health
+      responses:
+        "200": { description: Healthy }
+  /ready:
+    get:
+      summary: Elysium and Hyperliquid dependency readiness
+      responses:
+        "200": { description: Ready }
+        "503": { description: A dependency is unavailable }
+  /api/config:
+    get:
+      summary: Public network and contract registry
+      responses:
+        "200": { description: Configuration }
+  /api/projects:
+    get:
+      summary: List project workspaces
+      responses:
+        "200": { description: Projects }
+    post:
+      summary: Create a project workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, tokenAddress]
+              properties:
+                name: { type: string }
+                tokenAddress: { type: string }
+                deployerAddress: { type: string }
+                ticker: { type: string }
+      responses:
+        "201": { description: Project created }
+  /api/tokens/inspect:
+    post:
+      summary: Inspect an Elysium ERC-20 using live RPC state
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [address]
+              properties:
+                address: { type: string }
+      responses:
+        "200": { description: Token inspection }
+  /api/hypercore/tickers/{ticker}:
+    get:
+      summary: Check a HyperCore testnet ticker
+      parameters:
+        - in: path
+          name: ticker
+          required: true
+          schema: { type: string, maxLength: 6 }
+      responses:
+        "200": { description: Ticker state }
+  /api/preflight/validate:
+    post:
+      summary: Run deterministic ceremony checks
+      responses:
+        "200": { description: Validation result }
+  /api/preflight/simulate:
+    post:
+      summary: Simulate a lifecycle transition without submitting a transaction
+      responses:
+        "200": { description: Simulation result }
+  /api/actions/draft:
+    post:
+      summary: Generate an unsigned deployment action
+      responses:
+        "200": { description: Unsigned action }
+        "422": { description: Preflight failed }
+  /api/reports/preflight:
+    post:
+      summary: Generate and optionally persist a preflight report
+      responses:
+        "200": { description: Preflight report }

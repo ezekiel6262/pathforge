@@ -3,6 +3,7 @@ export const config = Object.freeze({
   corsOrigin: process.env.CORS_ORIGIN || "*",
   rpcTimeoutMs: Number(process.env.RPC_TIMEOUT_MS || 10_000),
   dataFile: process.env.DATA_FILE || (process.env.VERCEL ? "/tmp/pathforge.json" : ".data/pathforge.json"),
+  redisKey: process.env.PATHFORGE_REDIS_KEY || "pathforge:state:v1",
   networks: {
     elysiumTestnet: {
       key: "elysium-testnet",

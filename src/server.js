@@ -8,6 +8,7 @@ import { buildAction } from "./services/actions.js";
 import { resolveLifecycle } from "./services/lifecycle.js";
 import { createReport } from "./services/report.js";
 import { JsonStore } from "./storage/json-store.js";
+import { RedisStore } from "./storage/redis-store.js";
 import { ProjectService } from "./services/projects.js";
 import { AlertService } from "./services/alerts.js";
 import { lookupTicker } from "./services/ticker.js";
@@ -19,7 +20,9 @@ import { readJson, send } from "./http.js";
 const rpc = new JsonRpcClient(config.networks.elysiumTestnet.rpcUrl, config.rpcTimeoutMs);
 const hyperliquid = new HyperliquidClient(config.hyperliquid.apiUrl, config.rpcTimeoutMs);
 const inspector = new TokenInspector(rpc, config.networks.elysiumTestnet);
-const store = new JsonStore(config.dataFile);
+const store = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+  ? RedisStore.fromEnv(config.redisKey)
+  : new JsonStore(config.dataFile);
 const projects = new ProjectService(store);
 const alerts = new AlertService(store);
 

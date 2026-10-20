@@ -6,3 +6,4 @@ work/
 .data/
 
 .vercel
+.env*.local
